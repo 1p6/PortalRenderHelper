@@ -8,7 +8,11 @@ ent.texture = 'objects/refill/idle00'
 ent.placements = {
     {
         name = 'default',
-        data = {},
+        data = {
+            closed = false,
+            flag = '',
+            invert = false,
+        },
     }
 }
 

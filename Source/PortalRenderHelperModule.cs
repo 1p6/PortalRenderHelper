@@ -28,13 +28,13 @@ public class PortalRenderHelperModule : EverestModule {
     public override void Load() {
         // TODO: apply any hooks that should always be active
         Everest.Events.Level.OnLoadBackdrop += OnLoadBackdrop;
-        On.Monocle.Engine.RenderCore += PortalRenderEffect.OnRenderCore;
+        On.Monocle.Engine.RenderCore += PortalRenderer.OnRenderCore;
     }
 
     public override void Unload() {
         // TODO: unapply any hooks applied in Load()
         Everest.Events.Level.OnLoadBackdrop -= OnLoadBackdrop;
-        On.Monocle.Engine.RenderCore -= PortalRenderEffect.OnRenderCore;
+        On.Monocle.Engine.RenderCore -= PortalRenderer.OnRenderCore;
     }
 
     public static Backdrop OnLoadBackdrop(MapData map, BinaryPacker.Element child, BinaryPacker.Element above)

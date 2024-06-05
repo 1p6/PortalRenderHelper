@@ -18,7 +18,7 @@ public class RelativeTeleportTrigger : Trigger {
     public bool invertFlag;
 
     public void DoTeleport(Player player) {
-        Audio.Play("event:/game/general/diamond_touch");
+        // Audio.Play("event:/game/general/diamond_touch");
         Vector2 preCameraTarget = player.CameraTarget;
         player.Position += TeleportOffset;
         Vector2 postCameraTarget = player.CameraTarget;
