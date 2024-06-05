@@ -1,0 +1,9 @@
+- Name: PortalRenderHelperTestMap
+  Version: 0.1.0
+  Dependencies:
+    - Name: Everest
+      Version: 1.4673.0
+    - Name: PandorasBox
+      Version: 1.0.49
+    - Name: PortalRenderHelper
+      Version: 0.1.0

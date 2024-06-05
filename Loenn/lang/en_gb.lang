@@ -1,0 +1,5 @@
+entities.PortalRenderHelper/RelativeTeleportTrigger.placements.name.default=Relative Teleport Trigger
+entities.PortalRenderHelper/RelativeTeleportTrigger.placements.name.description=Trigger that teleports the player by a offset as defined by the trigger's node.
+
+entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.flag=Optional flag that can enable / disable the trigger. Trigger is always active if left blank.
+entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for trigger to be enabled, On = Flag must be disabled for trigger to be enabled.
