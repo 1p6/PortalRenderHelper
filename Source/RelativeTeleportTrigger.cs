@@ -19,10 +19,12 @@ public class RelativeTeleportTrigger : Trigger {
 
     public void DoTeleport(Player player) {
         // Audio.Play("event:/game/general/diamond_touch");
-        Vector2 preCameraTarget = player.CameraTarget;
+        // Vector2 preCameraTarget = player.CameraTarget;
+        // Logger.Log(nameof(PortalRenderHelperModule), "teleport!");
         player.Position += TeleportOffset;
-        Vector2 postCameraTarget = player.CameraTarget;
-        player.level.Camera.Position += postCameraTarget - preCameraTarget;
+        player.level.Camera.Position += TeleportOffset;
+        // Vector2 postCameraTarget = player.CameraTarget;
+        // player.level.Camera.Position += postCameraTarget - preCameraTarget;
     }
 
     public override void OnEnter(Player player)

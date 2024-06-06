@@ -56,6 +56,8 @@ public class PortalRenderer {
         level.AfterRender();
     }
 
+    // internal static int DebugCounter = 0;
+
     public static void OnRenderCore(On.Monocle.Engine.orig_RenderCore orig, Engine self) {
         if(self.scene is Level level) {
 
@@ -63,14 +65,24 @@ public class PortalRenderer {
             self.GraphicsDevice.Clear(Color.Transparent);
 
             IsRenderingPortals = true;
+            // bool isFirst = true;
 
             foreach(PortalRenderPoly poly in level.Tracker.GetEntities<PortalRenderPoly>()) {
                 poly.SetStencil();
 
                 self.GraphicsDevice.SetRenderTarget(null);
                 Vector2 origPos = level.Camera.Position;
-                level.Camera.Position += poly.RenderOffset;
+                // floor since the camera pos gets floored later anyways, and doing it now prevents numerical errors caused by adding to the result of lerp smoothing (lerp smoothing gives floats that are almost an integer but not quite 3: )
+                level.Camera.Position = origPos.Floor() + poly.RenderOffset;
+                // if(isFirst && DebugCounter % 12 == 0) {
+                //     Logger.Log(nameof(PortalRenderHelperModule), $"pos before: {level.Camera.Position}");
+                // }
                 DoPartialLevelRender(level);
+                // if(isFirst && DebugCounter % 12 == 0) {
+                //     Logger.Log(nameof(PortalRenderHelperModule), $"pos after:  {level.Camera.Position}");
+                // }
+                // if(isFirst) DebugCounter++;
+                // isFirst = false;
                 level.Camera.Position = origPos;
             }
 
@@ -157,6 +169,8 @@ public class PortalRenderEffect : Backdrop {
     public override void Render(Scene scene)
     {
         if(PortalRenderer.IsRenderingPortals) {
+            // if(PortalRenderer.DebugCounter % 12 == 0)
+            //     Logger.Log(nameof(PortalRenderHelperModule), $"pos mid:    {(scene as Level).Camera.Position}");
             Engine.Instance.GraphicsDevice.SetRenderTarget(PortalRenderer.RenderTarget);
             PortalRenderer.Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, PortalRenderer.StenciledCopy, RasterizerState.CullNone);
             PortalRenderer.Batch.Draw(GameplayBuffers.Level, Vector2.Zero, Color.White);
