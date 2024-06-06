@@ -117,7 +117,7 @@ public class PortalRenderPoly : Entity {
         InvertFlag = data.Bool("invert");
 
         RenderOffset = data.Nodes[0] - Position;
-        RenderPoly = new VertexPositionColor[data.Nodes.Length + (Closed ? 0 : 2)];
+        RenderPoly = new VertexPositionColor[data.Nodes.Length * (Closed ? 1 : 2)];
         RenderPoly[0].Position = new Vector3(Position, 0);
         for(int i = 1; i < data.Nodes.Length; ++i) {
             RenderPoly[i].Position = new(data.Nodes[i], 0);
@@ -144,9 +144,11 @@ public class PortalRenderPoly : Entity {
             Player p = level.Tracker.GetEntity<Player>();
             Vector3 playerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
             // hopefully this is large enough
-            float farAway = 1000.0f;
-            RenderPoly[^2].Position = playerPos + (RenderPoly[^3].Position - playerPos) * farAway;
-            RenderPoly[^1].Position = playerPos + (RenderPoly[0].Position - playerPos) * farAway;
+            float farAway = 10000.0f;
+            // Add points "at infinity" that go back through the polygon in reverse order. This properly generalizes the old behaviour to polygons defined with more than two finite vertices.
+            for(int i = 0; i < RenderPoly.Length/2; ++i) {
+                RenderPoly[^(i+1)].Position = playerPos + (RenderPoly[i].Position - playerPos) * farAway;
+            }
         }
 
         Engine.Instance.GraphicsDevice.SetRenderTarget(PortalRenderer.RenderTarget);
