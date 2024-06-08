@@ -2,6 +2,9 @@ local trig = {}
 local utils = require('utils')
 local drawing = require('utils.drawing')
 local colors = require('consts.colors')
+local drawableRectangle = require('structs.drawable_rectangle')
+local drawableFunc = require('structs.drawable_function')
+local drawableSprite = require('structs.drawable_sprite')
 
 trig.name = "PortalRenderHelper/RelativeTeleportTrigger"
 local humanName = utils.humanizeVariableName(trig.name)
@@ -19,7 +22,9 @@ trig.placements = {
 }
 
 trig.nodeLimits = {1,1}
+trig.depth = 0
 trig.nodeLineRenderType = 'line'
+trig.nodeVisibility = 'always'
 
 function trig.selection(room, entity)
     local x, y = entity.x or 0, entity.y or 0
@@ -31,21 +36,29 @@ function trig.selection(room, entity)
     }
 end
 
-function trig.draw(room, entity, viewport)
+function trig.sprite(room, entity, viewport)
     local x, y = entity.x or 0, entity.y or 0
     local width, height = entity.width or 16, entity.height or 16
-    local lineWidth = love.graphics.getLineWidth()
+    return {
+        drawableRectangle.fromRectangle('bordered', x, y, width, height, colors.triggerColor, colors.triggerBorderColor),
+        -- todo, in dev branch of loenn, drawable text exists. use that instead when that comes out mayhaps
+        drawableSprite.fromTexture('Flynx/PortalRenderHelper/objects/teleport', {
+            x = x + width/2, y = y + height/2,
+            depth = trig.depth
+        }),
+    }
+end
 
-    drawing.callKeepOriginalColor(function()
-        love.graphics.setColor(colors.triggerBorderColor)
-        love.graphics.rectangle("line", x + lineWidth / 2, y + lineWidth / 2, width - lineWidth, height - lineWidth)
-
-        love.graphics.setColor(colors.triggerColor)
-        love.graphics.rectangle("fill", x + lineWidth, y + lineWidth, width - 2 * lineWidth, height - 2 * lineWidth)
-
-        love.graphics.setColor(colors.triggerTextColor)
-        drawing.printCenteredText(humanName, x, y, width, height)
-    end)
+function trig.nodeSprite(room, entity, node, nodeIndex, viewport)
+    local x, y = node.x or 0, node.y or 0
+    local width, height = entity.width or 16, entity.height or 16
+    return {
+        drawableRectangle.fromRectangle('bordered', x, y, width, height, colors.triggerColor, colors.triggerBorderColor),
+        drawableSprite.fromTexture('Flynx/PortalRenderHelper/objects/teleport2', {
+            x = x + width/2, y = y + height/2,
+            depth = trig.depth
+        }),
+    }
 end
 
 return trig

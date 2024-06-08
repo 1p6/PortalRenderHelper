@@ -4,5 +4,13 @@ entities.PortalRenderHelper/RelativeTeleportTrigger.placements.description.defau
 entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.flag=Optional flag that can enable / disable the trigger. Trigger is always active if left blank.
 entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for trigger to be enabled, On = Flag must be disabled for trigger to be enabled.
 
+
 entities.PortalRenderHelper/PortalRenderPoly.placements.name.default=Portal Render Polygon
 entities.PortalRenderHelper/PortalRenderPoly.placements.description.default=Defines the edges of the portal renderer. The actual rendering is done in a foreground styleground, which must also be added to the map.
+
+entities.PortalRenderHelper/PortalRenderPoly.attributes.description.closed=Whether the polygon is closed. On = Only the region defined by the polygon will be used. Off = The curve will be extended to infinity away from the player.
+entities.PortalRenderHelper/PortalRenderPoly.attributes.description.flag=Optional flag that can enable / disable the poly. Poly is always active if left blank.
+entities.PortalRenderHelper/PortalRenderPoly.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for the poly to be enabled, On = Flag must be disabled for the poly to be enabled.
+
+
+style.effects.PortalRenderHelper/PortalRenderEffect.name=Portal Render Effect
