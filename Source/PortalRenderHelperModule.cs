@@ -29,12 +29,14 @@ public class PortalRenderHelperModule : EverestModule {
         // TODO: apply any hooks that should always be active
         Everest.Events.Level.OnLoadBackdrop += OnLoadBackdrop;
         On.Monocle.Engine.RenderCore += PortalRenderer.OnRenderCore;
+        // On.Celeste.Level.EnforceBounds += RelativeTeleportTrigger.DisableBounds;
     }
 
     public override void Unload() {
         // TODO: unapply any hooks applied in Load()
         Everest.Events.Level.OnLoadBackdrop -= OnLoadBackdrop;
         On.Monocle.Engine.RenderCore -= PortalRenderer.OnRenderCore;
+        // On.Celeste.Level.EnforceBounds -= RelativeTeleportTrigger.DisableBounds;
     }
 
     public static Backdrop OnLoadBackdrop(MapData map, BinaryPacker.Element child, BinaryPacker.Element above)

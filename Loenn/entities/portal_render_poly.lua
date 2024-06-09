@@ -66,7 +66,7 @@ function ent.sprite(room, entity, viewport)
     local destNode = nodes[1] or {}
     local destX, destY = destNode.x or 0, destNode.y or 0
     local lines = {
-        arrowSprites(entityX, entityY, destX, destY, 'blue')
+        arrowSprites(destX, destY, entityX, entityY, 'blue')
     }
     local offsetX = destX - entityX
     local offsetY = destY - entityY

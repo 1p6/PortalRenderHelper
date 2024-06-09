@@ -1,4 +1,3 @@
-using System;
 using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -21,6 +20,8 @@ public class PortalRenderer {
     }}
 
     public static bool IsRenderingPortals {get; set;} = false;
+
+    public static Vector3 PlayerPos {get; set;} = Vector3.Zero;
     public static readonly DepthStencilState StenciledCopy = new() {
         StencilEnable = true,
         DepthBufferEnable = false,
@@ -68,6 +69,8 @@ public class PortalRenderer {
             // bool isFirst = true;
 
             foreach(PortalRenderPoly poly in level.Tracker.GetEntities<PortalRenderPoly>()) {
+                Player p = level.Tracker.GetEntity<Player>();
+                if(p != null) PlayerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
                 poly.SetStencil();
 
                 self.GraphicsDevice.SetRenderTarget(null);
@@ -116,11 +119,12 @@ public class PortalRenderPoly : Entity {
         Flag = data.Attr("flag");
         InvertFlag = data.Bool("invert");
 
-        RenderOffset = data.Nodes[0] - Position;
+        // turns out all the positions in `data` are relative to the current room's coordinates, and offset gives the position of the room in the map's coordinates
+        RenderOffset = data.Nodes[0] + offset - Position;
         RenderPoly = new VertexPositionColor[data.Nodes.Length * (Closed ? 1 : 2)];
         RenderPoly[0].Position = new Vector3(Position, 0);
         for(int i = 1; i < data.Nodes.Length; ++i) {
-            RenderPoly[i].Position = new(data.Nodes[i], 0);
+            RenderPoly[i].Position = new(data.Nodes[i] + offset, 0);
         }
 
         RenderPolyIndices = new int[(RenderPoly.Length-2)*3];
@@ -141,13 +145,11 @@ public class PortalRenderPoly : Entity {
     public void SetStencil() {
         Level level = SceneAs<Level>();
         if(!Closed) {
-            Player p = level.Tracker.GetEntity<Player>();
-            Vector3 playerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
             // hopefully this is large enough
             float farAway = 10000.0f;
             // Add points "at infinity" that go back through the polygon in reverse order. This properly generalizes the old behaviour to polygons defined with more than two finite vertices.
             for(int i = 0; i < RenderPoly.Length/2; ++i) {
-                RenderPoly[^(i+1)].Position = playerPos + (RenderPoly[i].Position - playerPos) * farAway;
+                RenderPoly[^(i+1)].Position = PortalRenderer.PlayerPos + (RenderPoly[i].Position - PortalRenderer.PlayerPos) * farAway;
             }
         }
 
