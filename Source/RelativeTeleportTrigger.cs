@@ -31,10 +31,14 @@ public class RelativeTeleportTrigger : Trigger {
             player.Position += TeleportOffset;
             player.level.Camera.Position += TeleportOffset;
             if(!player.level.Bounds.Contains(player.Collider.Bounds)) {
-                Engine.TimeRate = 1f;
-                Distort.Anxiety = 0f;
-                Distort.GameRate = 1f;
-                player.level.TransitionTo(player.level.Session.MapData.GetAt(player.Position), Vector2.Zero);
+                LevelData mapdata = player.level.Session.MapData.GetAt(player.Position);
+                Logger.Log(nameof(PortalRenderHelperModule), $"mapdata: {mapdata}");
+                if(mapdata != null && mapdata != player.level.Session.LevelData) {
+                    Engine.TimeRate = 1f;
+                    Distort.Anxiety = 0f;
+                    Distort.GameRate = 1f;
+                    player.level.TransitionTo(mapdata, Vector2.Zero);
+                }
             }
         };
         // player.Position += TeleportOffset;
