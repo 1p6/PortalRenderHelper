@@ -11,6 +11,7 @@ entities.PortalRenderHelper/PortalRenderPoly.placements.description.default=Defi
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.closed=Whether the polygon is closed. On = Only the region defined by the polygon will be used. Off = The curve will be extended to infinity away from the player.
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.flag=Optional flag that can enable / disable the poly. Poly is always active if left blank.
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for the poly to be enabled, On = Flag must be disabled for the poly to be enabled.
+entities.PortalRenderHelper/PortalRenderPoly.attributes.description.portalDepth=Controls the order that portal polygons get rendered. Lower values get rendered first, then higher values overlay the lower ones.
 
 
 style.effects.PortalRenderHelper/PortalRenderEffect.name=Portal Render Effect

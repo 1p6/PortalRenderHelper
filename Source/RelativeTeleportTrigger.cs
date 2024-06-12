@@ -29,11 +29,19 @@ public class RelativeTeleportTrigger : Trigger {
         // Logger.Log(nameof(PortalRenderHelperModule), "teleport!");
         player.level.OnEndOfFrame += delegate {
             player.Position += TeleportOffset;
+            // Logger.Log(nameof(PortalRenderHelperModule), $"pos before: {player.level.Camera.Position}");
+            // there was an issue with how the camera was appearing, seems it's more an issue in the base game itself having to do with the player entering and immediately entering a camera target trigger
+            // NVM LOL I guess I did the math wrong at some point? anyway, since the camera target trigger points to the center of the screen, and the screen is 180 pixels / 22.5 tiles tall, it should point at 22.5/2 or 11.25 tiles below the top of the level. I forgot the 0.25 tiles / 2 pixels when positioning the camera target.
+            // player.level.Camera.Position = player.level.Camera.Position.Round() + TeleportOffset;
+            // Logger.Log(nameof(PortalRenderHelperModule), $"target camera pos: {player.CameraTarget}");
             player.level.Camera.Position += TeleportOffset;
+            // player.CameraAnchor += TeleportOffset;
+            // Logger.Log(nameof(PortalRenderHelperModule), $"pos after: {player.level.Camera.Position}");
             if(!player.level.Bounds.Contains(player.Collider.Bounds)) {
                 LevelData mapdata = player.level.Session.MapData.GetAt(player.Position);
-                Logger.Log(nameof(PortalRenderHelperModule), $"mapdata: {mapdata}");
+                // Logger.Log(nameof(PortalRenderHelperModule), $"mapdata: {mapdata}");
                 if(mapdata != null && mapdata != player.level.Session.LevelData) {
+                    // from Level.NextLevel
                     Engine.TimeRate = 1f;
                     Distort.Anxiety = 0f;
                     Distort.GameRate = 1f;

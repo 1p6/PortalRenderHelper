@@ -21,6 +21,7 @@ ent.placements = {
             closed = false,
             flag = '',
             invert = false,
+            portalDepth = 0,
         },
     }
 }

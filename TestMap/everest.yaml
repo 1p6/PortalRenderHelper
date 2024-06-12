@@ -3,6 +3,8 @@
   Dependencies:
     - Name: Everest
       Version: 1.4673.0
+    - Name: HonlyHelper
+      Version: 1.7.4
     - Name: PandorasBox
       Version: 1.0.49
     - Name: PortalRenderHelper

@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -68,8 +70,11 @@ public class PortalRenderer {
             IsRenderingPortals = true;
             // bool isFirst = true;
 
-            foreach(PortalRenderPoly poly in level.Tracker.GetEntities<PortalRenderPoly>()) {
-                if(poly.Flag.Length != 0 && poly.InvertFlag != level.Session.GetFlag(poly.Flag)) continue;
+            List<PortalRenderPoly> list = level.Tracker.GetEntities<PortalRenderPoly>().ConvertAll(x => (PortalRenderPoly) x);
+            list.Sort((x, y) => Comparer.Default.Compare(x.PortalDepth, y.PortalDepth));
+
+            foreach(PortalRenderPoly poly in list) {
+                if(poly.Flag.Length != 0 && poly.InvertFlag == level.Session.GetFlag(poly.Flag)) continue;
 
                 Player p = level.Tracker.GetEntity<Player>();
                 if(p != null) PlayerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
@@ -97,6 +102,7 @@ public class PortalRenderer {
     }
 
     public static void DrawPoly<T>(Matrix matrix, T[] vertices, int[] indices, DepthStencilState depth, RasterizerState raster) where T : struct, IVertexType {
+        // from GFX.DrawIndexedVertices
         Effect obj = GFX.FxPrimitive;
         Vector2 vector = new(Engine.Graphics.GraphicsDevice.Viewport.Width, Engine.Graphics.GraphicsDevice.Viewport.Height);
         matrix *= Matrix.CreateScale(1f / vector.X * 2f, (0f - 1f / vector.Y) * 2f, 1f);
@@ -120,6 +126,7 @@ public class PortalRenderPoly : Entity {
         Closed = data.Bool("closed", false);
         Flag = data.Attr("flag");
         InvertFlag = data.Bool("invert");
+        PortalDepth = data.Float("portalDepth");
 
         // turns out all the positions in `data` are relative to the current room's coordinates, and offset gives the position of the room in the map's coordinates
         RenderOffset = data.Nodes[0] + offset - Position;
@@ -143,6 +150,7 @@ public class PortalRenderPoly : Entity {
     public bool Closed;
     public string Flag;
     public bool InvertFlag;
+    public float PortalDepth;
 
     public void SetStencil() {
         Level level = SceneAs<Level>();
