@@ -42,6 +42,10 @@ public class RelativeTeleportTrigger : Trigger {
                 // Logger.Log(nameof(PortalRenderHelperModule), $"mapdata: {mapdata}");
                 if(mapdata != null && mapdata != player.level.Session.LevelData) {
                     // from Level.NextLevel
+                    foreach(TheoCrystal c in player.level.Tracker.GetEntities<TheoCrystal>()) {
+                        // fix crash from theo crystals lol, there miiight be a better way, but whatever. why do theo crystals even have this tag? none of the other holdables do??
+                        if(!c.Hold.IsHeld) c.RemoveTag(Tags.TransitionUpdate);
+                    }
                     Engine.TimeRate = 1f;
                     Distort.Anxiety = 0f;
                     Distort.GameRate = 1f;

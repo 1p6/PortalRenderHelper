@@ -76,8 +76,15 @@ public class PortalRenderer {
             foreach(PortalRenderPoly poly in list) {
                 if(poly.Flag.Length != 0 && poly.InvertFlag == level.Session.GetFlag(poly.Flag)) continue;
 
+                foreach(Lookout l in level.Tracker.GetEntities<Lookout>()) {
+                    if(l.interacting) {
+                        PlayerPos = new(level.Camera.Position + new Vector2(160, 90), 0);
+                        goto setStencil;
+                    }
+                }
                 Player p = level.Tracker.GetEntity<Player>();
                 if(p != null) PlayerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
+                setStencil:
                 poly.SetStencil();
 
                 self.GraphicsDevice.SetRenderTarget(null);
