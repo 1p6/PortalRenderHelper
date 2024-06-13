@@ -1,3 +1,4 @@
+using System;
 using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Monocle;
@@ -35,6 +36,7 @@ public class RelativeTeleportTrigger : Trigger {
             // player.level.Camera.Position = player.level.Camera.Position.Round() + TeleportOffset;
             // Logger.Log(nameof(PortalRenderHelperModule), $"target camera pos: {player.CameraTarget}");
             player.level.Camera.Position += TeleportOffset;
+            PortalRenderer.CameraAngle += (float) Math.PI/2;
             // player.CameraAnchor += TeleportOffset;
             // Logger.Log(nameof(PortalRenderHelperModule), $"pos after: {player.level.Camera.Position}");
             if(!player.level.Bounds.Contains(player.Collider.Bounds)) {

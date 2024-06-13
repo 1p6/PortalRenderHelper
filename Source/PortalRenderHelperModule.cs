@@ -30,6 +30,7 @@ public class PortalRenderHelperModule : EverestModule {
         Everest.Events.Level.OnLoadBackdrop += OnLoadBackdrop;
         On.Monocle.Engine.RenderCore += PortalRenderer.OnRenderCore;
         // On.Celeste.Level.EnforceBounds += RelativeTeleportTrigger.DisableBounds;
+        On.Monocle.Camera.UpdateMatrices += PortalRenderer.UpdateMatrices;
     }
 
     public override void Unload() {
@@ -37,6 +38,7 @@ public class PortalRenderHelperModule : EverestModule {
         Everest.Events.Level.OnLoadBackdrop -= OnLoadBackdrop;
         On.Monocle.Engine.RenderCore -= PortalRenderer.OnRenderCore;
         // On.Celeste.Level.EnforceBounds -= RelativeTeleportTrigger.DisableBounds;
+        On.Monocle.Camera.UpdateMatrices -= PortalRenderer.UpdateMatrices;
     }
 
     public static Backdrop OnLoadBackdrop(MapData map, BinaryPacker.Element child, BinaryPacker.Element above)

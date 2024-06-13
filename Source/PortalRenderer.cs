@@ -24,6 +24,15 @@ public class PortalRenderer {
     public static bool IsRenderingPortals {get; set;} = false;
 
     public static Vector3 PlayerPos {get; set;} = Vector3.Zero;
+    public static float _CameraAngle = 0f;
+    public static float CameraAngle {
+        get => _CameraAngle;
+        set {
+            _CameraAngle = value;
+            Scene s = Engine.Instance.scene;
+            if(s is Level l && l.Camera != null) l.Camera.changed = true;
+        }
+    }
     public static readonly DepthStencilState StenciledCopy = new() {
         StencilEnable = true,
         DepthBufferEnable = false,
@@ -40,6 +49,13 @@ public class PortalRenderer {
         DepthBufferEnable = false,
         StencilPass = StencilOperation.Increment,
     };
+
+    public static void UpdateMatrices(On.Monocle.Camera.orig_UpdateMatrices orig, Camera self) {
+        orig(self);
+        Vector3 center = new(160, 90, 0);
+        self.matrix = self.matrix * Matrix.CreateTranslation(-center) * Matrix.CreateRotationZ(CameraAngle) * Matrix.CreateTranslation(center);
+        self.inverse = Matrix.CreateTranslation(-center) * Matrix.CreateRotationZ(-CameraAngle) * Matrix.CreateTranslation(center) * self.inverse;
+    }
 
     public static void DoPartialLevelRender(Level level) {
         level.BeforeRender();
@@ -185,6 +201,12 @@ public class PortalRenderEffect : Backdrop {
     {
         // RenderTarget?.Dispose();
         // Batch?.Dispose();
+    }
+
+    public override void Update(Scene scene)
+    {
+        base.Update(scene);
+        PortalRenderer.CameraAngle = Calc.AngleLerp(PortalRenderer.CameraAngle, 0, 0.03f);
     }
 
     public override void Render(Scene scene)
