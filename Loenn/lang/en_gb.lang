@@ -3,6 +3,8 @@ entities.PortalRenderHelper/RelativeTeleportTrigger.placements.description.defau
 
 entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.flag=Optional flag that can enable / disable the trigger. Trigger is always active if left blank.
 entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for trigger to be enabled, On = Flag must be disabled for trigger to be enabled.
+entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.angle=The angle in degrees going out relative to the angle going in, where positive is clockwise.
+entities.PortalRenderHelper/RelativeTeleportTrigger.attributes.description.changeTargetAngle=Whether the target angle of the camera should also be changed. With this disabled, the camera will smoothly rotate back to its original orientation after traveling through the portal.
 
 
 entities.PortalRenderHelper/PortalRenderPoly.placements.name.default=Portal Render Polygon
@@ -12,6 +14,22 @@ entities.PortalRenderHelper/PortalRenderPoly.attributes.description.closed=Wheth
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.flag=Optional flag that can enable / disable the poly. Poly is always active if left blank.
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for the poly to be enabled, On = Flag must be disabled for the poly to be enabled.
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.portalDepth=Controls the order that portal polygons get rendered. Lower values get rendered first, then higher values overlay the lower ones.
+entities.PortalRenderHelper/PortalRenderPoly.attributes.description.angle=The angle in degrees going out relative to the angle going in, where positive is clockwise.
+
+
+triggers.PortalRenderHelper/SetCameraAngleTrigger.placements.name.default=Set Camera Angle
+triggers.PortalRenderHelper/SetCameraAngleTrigger.placements.description.default=Sets the angle and/or the target angle of the camera, as changed by going through rotated portals.
+
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.flag=Optional flag that can enable / disable the trigger. Trigger is always active if left blank.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.invert=Invert how the flag is used. Off = Flag must be enabled for the trigger to be enabled, On = Flag must be disabled for the trigger to be enabled.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.angle=The angle in degrees to set the camera to, where positive angles rotate the camera clockwise.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setAngle=Whether the trigger should set the actual current angle of the camera.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setTargetAngle=Whether the trigger should set the target angle that the camera eases to.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setOnEnter=Whether the trigger activates when the player enters the trigger.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setOnExit=Whether the trigger activates when the player leaves the trigger.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setOnStay=Whether the trigger activates every tick that the player is inside the trigger.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setOnLoad=Whether the trigger activates when the room is entered.
+triggers.PortalRenderHelper/SetCameraAngleTrigger.attributes.description.setOnUnload=Whether the trigger activates when the room is left.
 
 
 style.effects.PortalRenderHelper/PortalRenderEffect.name=Portal Render Effect

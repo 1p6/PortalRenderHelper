@@ -1,9 +1,11 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Celeste.Mod.Entities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
+using MonoMod.Cil;
 
 namespace Celeste.Mod.PortalRenderHelper;
 
@@ -24,6 +26,19 @@ public class PortalRenderer {
     public static bool IsRenderingPortals {get; set;} = false;
 
     public static Vector3 PlayerPos {get; set;} = Vector3.Zero;
+    public static float _CameraAngle = 0f;
+    public static float CameraAngle {
+        get => _CameraAngle;
+        set {
+            _CameraAngle = value;
+            Scene s = Engine.Instance.scene;
+            if(s is Level l && l.Camera != null) l.Camera.changed = true;
+        }
+    }
+    public static float CameraTargetAngle { get; set; } = 0f;
+    public static Vector2 CameraMinBound = new(0,0);
+    public static Vector2 CameraMaxBound = new(320, 180);
+    public static bool _CameraBoundsChanged = true;
     public static readonly DepthStencilState StenciledCopy = new() {
         StencilEnable = true,
         DepthBufferEnable = false,
@@ -40,6 +55,63 @@ public class PortalRenderer {
         DepthBufferEnable = false,
         StencilPass = StencilOperation.Increment,
     };
+
+    public static void UpdateMatrices(On.Monocle.Camera.orig_UpdateMatrices orig, Camera self) {
+        orig(self);
+        Vector3 center = new(160, 90, 0);
+        self.matrix = self.matrix * Matrix.CreateTranslation(-center) * Matrix.CreateRotationZ(CameraAngle) * Matrix.CreateTranslation(center);
+        self.inverse = Matrix.CreateTranslation(-center) * Matrix.CreateRotationZ(-CameraAngle) * Matrix.CreateTranslation(center) * self.inverse;
+        _CameraBoundsChanged = true;
+    }
+    public static void TryUpdateCameraBounds(Camera self) {
+        if(self.changed || _CameraBoundsChanged) {
+            if(self.changed) self.UpdateMatrices();
+            Vector2[] corners = new Vector2[4];
+            int i = 0;
+            for(int y = 0; y <= 180; y += 180) {
+                for(int x = 0; x <= 320; x += 320) {
+                    corners[i++] = Vector2.Transform(new(x, y), self.Inverse);
+                }
+            }
+            Vector2 min = corners[0], max = corners[0];
+            for(i = 1; i < 4; i++) {
+                min.X = Math.Min(min.X, corners[i].X);
+                min.Y = Math.Min(min.Y, corners[i].Y);
+                max.X = Math.Max(max.X, corners[i].X);
+                max.Y = Math.Max(max.Y, corners[i].Y);
+            }
+            CameraMinBound = min;
+            CameraMaxBound = max;
+            _CameraBoundsChanged = false;
+        }
+    }
+    public static float CameraGetLeft(Camera self) {
+        TryUpdateCameraBounds(self);
+        return CameraMinBound.X;
+    }
+    public static float CameraGetRight(Camera self) {
+        TryUpdateCameraBounds(self);
+        return CameraMaxBound.X;
+    }
+    public static float CameraGetTop(Camera self) {
+        TryUpdateCameraBounds(self);
+        return CameraMinBound.Y;
+    }
+    public static float CameraGetBottom(Camera self) {
+        TryUpdateCameraBounds(self);
+        return CameraMaxBound.Y;
+    }
+
+    public static void HookTalkComponent(ILContext ctx) {
+        ILCursor cur = new(ctx);
+        cur.GotoNext(MoveType.Before, instr => instr.MatchStloc2());
+        cur.EmitPop().EmitLdarg0().EmitLdloc1();
+        cur.EmitDelegate(ModifyTalkComponentPos);
+    }
+    public static Vector2 ModifyTalkComponentPos(TalkComponent.TalkComponentUI self, Vector2 camPos) {
+        Vector2 center = new(160, 90);
+        return center + (self.Handler.Entity.Position - camPos - center).Rotate(CameraAngle) + self.Handler.DrawAt;
+    }
 
     public static void DoPartialLevelRender(Level level) {
         level.BeforeRender();
@@ -73,6 +145,13 @@ public class PortalRenderer {
             List<PortalRenderPoly> list = level.Tracker.GetEntities<PortalRenderPoly>().ConvertAll(x => (PortalRenderPoly) x);
             list.Sort((x, y) => Comparer.Default.Compare(x.PortalDepth, y.PortalDepth));
 
+            Player p = level.Tracker.GetEntity<Player>();
+            // PlayerSpriteMode oldMode = PlayerSpriteMode.Madeline;
+            // if(p != null) {
+            //     oldMode = p.Sprite.Mode;
+            //     p.ResetSprite(PlayerSpriteMode.Badeline);
+            // }
+
             foreach(PortalRenderPoly poly in list) {
                 if(poly.Flag.Length != 0 && poly.InvertFlag == level.Session.GetFlag(poly.Flag)) continue;
 
@@ -82,15 +161,18 @@ public class PortalRenderer {
                         goto setStencil;
                     }
                 }
-                Player p = level.Tracker.GetEntity<Player>();
-                if(p != null) PlayerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
+                // if(p != null) PlayerPos = new(p.Position - Vector2.UnitY * (p.Ducking ? 4f : 7.5f), 0);
+                if(p != null) PlayerPos = new(p.Center, 0);
                 setStencil:
                 poly.SetStencil();
 
                 self.GraphicsDevice.SetRenderTarget(null);
                 Vector2 origPos = level.Camera.Position;
+                float origAngle = CameraAngle;
                 // floor since the camera pos gets floored later anyways, and doing it now prevents numerical errors caused by adding to the result of lerp smoothing (lerp smoothing gives floats that are almost an integer but not quite 3: )
-                level.Camera.Position = origPos.Floor() + poly.RenderOffset;
+                Vector2 camCenter = new(160, 90);
+                level.Camera.Position = (origPos.Floor() + camCenter - poly.Position).Rotate(poly.Angle).Round() + poly.Target - camCenter;
+                CameraAngle -= poly.Angle;
                 // if(isFirst && DebugCounter % 12 == 0) {
                 //     Logger.Log(nameof(PortalRenderHelperModule), $"pos before: {level.Camera.Position}");
                 // }
@@ -101,7 +183,10 @@ public class PortalRenderer {
                 // if(isFirst) DebugCounter++;
                 // isFirst = false;
                 level.Camera.Position = origPos;
+                CameraAngle = origAngle;
             }
+
+            // if(p != null) p.ResetSprite(oldMode);
 
             IsRenderingPortals = false;
         }
@@ -134,9 +219,11 @@ public class PortalRenderPoly : Entity {
         Flag = data.Attr("flag");
         InvertFlag = data.Bool("invert");
         PortalDepth = data.Float("portalDepth");
+        Angle = data.Float("angle") / 180f * (float) Math.PI;
 
         // turns out all the positions in `data` are relative to the current room's coordinates, and offset gives the position of the room in the map's coordinates
-        RenderOffset = data.Nodes[0] + offset - Position;
+        Target = data.Nodes[0] + offset;
+        RenderOffset = Target - Position;
         RenderPoly = new VertexPositionColor[data.Nodes.Length * (Closed ? 1 : 2)];
         RenderPoly[0].Position = new Vector3(Position, 0);
         for(int i = 1; i < data.Nodes.Length; ++i) {
@@ -151,7 +238,9 @@ public class PortalRenderPoly : Entity {
         }
     }
 
+    public Vector2 Target;
     public Vector2 RenderOffset;
+    public float Angle;
     public VertexPositionColor[] RenderPoly;
     public int[] RenderPolyIndices;
     public bool Closed;
@@ -185,6 +274,13 @@ public class PortalRenderEffect : Backdrop {
     {
         // RenderTarget?.Dispose();
         // Batch?.Dispose();
+        PortalRenderer.CameraAngle = PortalRenderer.CameraTargetAngle = 0f;
+    }
+
+    public override void Update(Scene scene)
+    {
+        base.Update(scene);
+        PortalRenderer.CameraAngle = Calc.AngleLerp(PortalRenderer.CameraAngle, PortalRenderer.CameraTargetAngle, 0.05f);
     }
 
     public override void Render(Scene scene)
