@@ -22,9 +22,17 @@ ent.placements = {
             flag = '',
             invert = false,
             portalDepth = 0,
+            angle = 0.0,
         },
     }
 }
+
+local function rotateAround(axisX, axisY, x, y, cos, sin)
+    x = x - axisX
+    y = y - axisY
+    return (x * cos - y * sin + axisX), (y * cos + x * sin + axisY)
+end
+
 function ent.selection(room, entity)
     entity = entity or {}
     local nodes = {}
@@ -66,30 +74,37 @@ function ent.sprite(room, entity, viewport)
     local nodes = entity.nodes or {}
     local destNode = nodes[1] or {}
     local destX, destY = destNode.x or 0, destNode.y or 0
+    local theta = (entity.angle or 0.0) / 180.0 * math.pi
+    local cos, sin = math.cos(theta), math.sin(theta)
     local lines = {
         arrowSprites(destX, destY, entityX, entityY, 'blue')
     }
     local offsetX = destX - entityX
     local offsetY = destY - entityY
     local prevX, prevY = entityX, entityY
+    local prevDestX, prevDestY = destX, destY
     for i,node in ipairs(nodes) do
         if i == 1 then goto continue end
         local nodeX, nodeY = node.x or 0, node.y or 0
+        local nodeDestX, nodeDestY = rotateAround(entityX, entityY, nodeX, nodeY, cos, sin)
+        nodeDestX = nodeDestX + offsetX
+        nodeDestY = nodeDestY + offsetY
         lines[#lines+1] = drawableLine.fromPoints(
             {prevX, prevY, nodeX, nodeY},
             'red'
         )
         lines[#lines+1] = drawableLine.fromPoints(
-            {prevX+offsetX, prevY+offsetY, nodeX+offsetX, nodeY+offsetY},
+            {nodeDestX, nodeDestY, prevDestX, prevDestY},
             'green'
         )
         prevX, prevY = nodeX, nodeY
+        prevDestX, prevDestY = nodeDestX, nodeDestY
         ::continue::
     end
     if entity.closed then
         -- since it's closed, making these arrows is the only way to tell the orientation of the polygon. with open polygons, which end the blue arrow connects to gives the orientation
         lines[#lines+1] = arrowSprites(prevX, prevY, entityX, entityY, 'red')
-        lines[#lines+1] = arrowSprites(prevX+offsetX, prevY+offsetY, entityX+offsetX, entityY+offsetY, 'green')
+        lines[#lines+1] = arrowSprites(prevDestX, prevDestY, destX, destY, 'green')
     end
     return table.flatten(lines)
 end
