@@ -23,7 +23,13 @@ ent.placements = {
             invert = false,
             portalDepth = 0,
             angle = 0.0,
+            recursionDepth = 0,
         },
+    }
+}
+ent.fieldInformation = {
+    recursionDepth = {
+        fieldType = "integer"
     }
 }
 

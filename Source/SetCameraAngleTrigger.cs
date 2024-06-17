@@ -34,8 +34,8 @@ public class SetCameraAngleTrigger : Trigger {
     public void SetCamAngle() {
         if(Flag.Length != 0 && Invert == SceneAs<Level>().Session.GetFlag(Flag)) return;
 
-        if(SetAngle) PortalRenderer.CameraAngle = Angle;
-        if(SetTargetAngle) PortalRenderer.CameraTargetAngle = Angle;
+        if(SetAngle) CameraHooks.CameraAngle = Angle;
+        if(SetTargetAngle) CameraHooks.CameraTargetAngle = Angle;
     }
 
     public override void OnEnter(Player player)

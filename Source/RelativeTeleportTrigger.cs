@@ -54,11 +54,16 @@ public class RelativeTeleportTrigger : Trigger {
         return res && !teleCollide;
     }
 
+    public static bool AlreadyTeleporting = false;
+
     public void DoTeleport(Player player) {
         // Audio.Play("event:/game/general/diamond_touch");
         // Vector2 preCameraTarget = player.CameraTarget;
         // Logger.Log(nameof(PortalRenderHelperModule), "teleport!");
+        if(AlreadyTeleporting) return;
+        AlreadyTeleporting = true;
         player.level.OnEndOfFrame += delegate {
+            AlreadyTeleporting = false;
             Vector2 oldPos = player.Position;
             Vector2 oldCounter = player.movementCounter;
             player.NaiveMove(Target + (player.Center - Position).Rotate(Angle) - player.Center);
@@ -78,8 +83,8 @@ public class RelativeTeleportTrigger : Trigger {
             // Logger.Log(nameof(PortalRenderHelperModule), $"target camera pos: {player.CameraTarget}");
             Vector2 cameraCenter = new(160, 90);
             player.level.Camera.Position = Target + (player.level.Camera.Position + cameraCenter - Position).Rotate(Angle) - cameraCenter;
-            PortalRenderer.CameraAngle -= Angle;
-            if(ChangeTargetAngle) PortalRenderer.CameraTargetAngle -= Angle;
+            CameraHooks.CameraAngle -= Angle;
+            if(ChangeTargetAngle) CameraHooks.CameraTargetAngle -= Angle;
             // player.CameraAnchor += TeleportOffset;
             // Logger.Log(nameof(PortalRenderHelperModule), $"pos after: {player.level.Camera.Position}");
             if(!player.level.Bounds.Contains(player.Collider.Bounds)) {
