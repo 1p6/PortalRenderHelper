@@ -5,4 +5,6 @@ public class PortalRenderHelperModuleSettings : EverestModuleSettings {
 
     [SettingRange(0,50,true)]
     public int MaxRecursionDepth {get; set;} = 50;
+
+    public bool IgnoreMapRecursionLimits {get; set;} = false;
 }

@@ -45,8 +45,10 @@ public static class PortalRenderer {
     }
 
     public static int LevelRenders = 0;
+    public static int MaxLevelRenders = 0;
     public static void DoPartialLevelRender(Level level) {
         LevelRenders++;
+        if(LevelRenders > MaxLevelRenders) MaxLevelRenders = LevelRenders;
         level.BeforeRender();
 
         // from Level.Render
@@ -66,7 +68,7 @@ public static class PortalRenderer {
 
     // internal static int DebugCounter = 0;
 
-    public static void RenderPortalsToTarget(Level level, List<PortalRenderPoly> sortedPolys, int depth, Vector2 minBound, Vector2 maxBound) {
+    public static void RenderPortalsToTarget(Level level, List<PortalRenderPoly> sortedPolys, int depth, Vector2 minBound, Vector2 maxBound, AngleInterval angleBound) {
         if(InnerRenderTarget == null) throw new Exception("null inner render target!");
         Engine.Instance.GraphicsDevice.SetRenderTarget(InnerRenderTarget);
         Engine.Instance.GraphicsDevice.Clear(Color.Transparent);
@@ -79,10 +81,11 @@ public static class PortalRenderer {
             if(poly.Flag.Length != 0 && poly.InvertFlag == level.Session.GetFlag(poly.Flag)) continue;
 
             poly.UpdateBounds();
-            if(poly.TurningNumberCull && poly.TurningNumber < 0) continue;
             Vector2 newMin = Vector2.Max(minBound, poly.Min);
             Vector2 newMax = Vector2.Min(maxBound, poly.Max);
-            if(newMin.X >= newMax.X || newMin.Y >= newMax.Y) continue;
+            AngleInterval newAngle = angleBound.Intersect(poly.AngleSpan);
+            if(newMin.X >= newMax.X - 0.001 || newMin.Y >= newMax.Y - 0.001 || newAngle.IsEmpty)
+                continue;
             poly.SetStencil(OuterRenderTarget);
 
             Vector2 origPos = level.Camera.Position;
@@ -97,10 +100,10 @@ public static class PortalRenderer {
             // if(isFirst && DebugCounter % 12 == 0) {
             //     Logger.Log(nameof(PortalRenderHelperModule), $"pos before: {level.Camera.Position}");
             // }
-            int newDepth = Math.Min(depth-1, poly.RecursionDepth);
+            int newDepth = PortalRenderHelperModule.Settings.IgnoreMapRecursionLimits ? depth-1 : Math.Min(depth-1, poly.RecursionDepth);
             if(newDepth > 0) {
                 InnerRenderTarget = (inner ??= RenderTargetPool.Alloc());
-                RenderPortalsToTarget(level, sortedPolys, newDepth, newMin, newMax);
+                RenderPortalsToTarget(level, sortedPolys, newDepth, newMin, newMax, newAngle);
             } else InnerRenderTarget = null;
             Engine.Instance.GraphicsDevice.SetRenderTarget(null);
             DoPartialLevelRender(level);
@@ -127,7 +130,8 @@ public static class PortalRenderer {
                     break;
                 }
             }
-            int maxDepth = Math.Min(PortalRenderHelperModule.Settings.MaxRecursionDepth, effect == null ? 0 : effect.MaxRecursionDepth);
+            int maxDepth = Math.Min(PortalRenderHelperModule.Settings.MaxRecursionDepth, effect == null ? 0 : (PortalRenderHelperModule.Settings.IgnoreMapRecursionLimits ? int.MaxValue : effect.MaxRecursionDepth));
+
             if(maxDepth <= 0) {
                 if(InnerRenderTarget != null) {
                     RenderTargetPool.Free(InnerRenderTarget);
@@ -163,7 +167,7 @@ public static class PortalRenderer {
 
             int beforeNumActive = RenderTargetPool.NumActiveTargets;
             LevelRenders = 0;
-            RenderPortalsToTarget(level, list, maxDepth, new(0,0), new(320,180));
+            RenderPortalsToTarget(level, list, maxDepth, new(0,0), new(320,180), AngleInterval.FULL);
             if(beforeNumActive != RenderTargetPool.NumActiveTargets)
                 throw new Exception("mismatched alloc / free of render targets from pool!");
 
@@ -202,7 +206,7 @@ public class PortalRenderPoly : Entity {
         PortalDepth = data.Float("portalDepth");
         Angle = data.Float("angle") / 180f * (float) Math.PI;
         RecursionDepth = data.Int("recursionDepth");
-        TurningNumberCull = data.Bool("turningNumberCull", true);
+        // TurningNumberCull = data.Bool("turningNumberCull", true);
 
         // turns out all the positions in `data` are relative to the current room's coordinates, and offset gives the position of the room in the map's coordinates
         Target = data.Nodes[0] + offset;
@@ -234,8 +238,7 @@ public class PortalRenderPoly : Entity {
 
     public Vector2 Min = new(0,0);
     public Vector2 Max = new(320,180);
-    public int TurningNumber = 0;
-    public bool TurningNumberCull;
+    public AngleInterval AngleSpan = AngleInterval.FULL;
 
     public void UpdateBounds() {
         if(!Closed) {
@@ -249,19 +252,32 @@ public class PortalRenderPoly : Entity {
         }
         Min = new(float.PositiveInfinity);
         Max = new(float.NegativeInfinity);
-        float turningAngle = 0;
-        Vector2 prevPos = RenderPoly[^1].Position.XY();
-        float prevDiffAngle = Calc.Angle(RenderPoly[^2].Position.XY(), prevPos);
         foreach(VertexPositionColor point in RenderPoly) {
             Vector2 pos = Vector2.Transform(point.Position.XY(), SceneAs<Level>().Camera.Matrix);
             Min = Vector2.Min(Min, pos);
             Max = Vector2.Max(Max, pos);
-            float diffAngle = Calc.Angle(prevPos, pos);
-            turningAngle += Calc.WrapAngle(diffAngle - prevDiffAngle);
-            prevDiffAngle = diffAngle;
-            prevPos = pos;
         }
-        TurningNumber = (int)Math.Round(turningAngle / (Math.PI*2f));
+        if(Closed) {
+            AngleSpan = AngleInterval.EMPTY;
+            Vector2 playerPos = PortalRenderer.PlayerPos.XY();
+            float prev = Calc.Angle(playerPos, RenderPoly[^1].Position.XY());
+            foreach(VertexPositionColor point in RenderPoly) {
+                float current = Calc.Angle(playerPos, point.Position.XY());
+                float diff = Calc.WrapAngle(current-prev);
+                AngleSpan = AngleSpan.Union(diff < 0f ? new(prev+diff, prev) : new(prev, prev+diff));
+                prev = current;
+            }
+        } else {
+            Vector2 playerPos = PortalRenderer.PlayerPos.XY();
+            float start = Calc.Angle(playerPos, RenderPoly[0].Position.XY());
+            float end = start, prev = start;
+            for(int i = 1; i < RenderPoly.Length/2; i++) {
+                float current = Calc.Angle(playerPos, RenderPoly[i].Position.XY());
+                end += Calc.WrapAngle(current - prev);
+                prev = current;
+            }
+            AngleSpan = new(end, start);
+        }
     }
 
     public void SetStencil(VirtualRenderTarget rt) {

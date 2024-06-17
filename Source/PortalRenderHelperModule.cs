@@ -85,7 +85,14 @@ public class PortalRenderHelperModule : EverestModule {
         if(!Settings.EnableDebugInfo) return text;
         return $@"{text}
 PortalRenderHelper:
- Allocated render targets: {RenderTargetPool.NumTargets}
- Level renders per frame: {PortalRenderer.LevelRenders}";
+ Allocated render targets: {RenderTargetPool.NumAllocdTargets}
+ Level renders per frame: {PortalRenderer.LevelRenders}
+ Max level renders per frame: {PortalRenderer.MaxLevelRenders}";
+    }
+
+    [Command("portal_render_helper_clear_cache", "Clears the render target pool and the max rendered levels counter")]
+    public static void ClearCacheCommand() {
+        RenderTargetPool.Clear();
+        PortalRenderer.MaxLevelRenders = PortalRenderer.LevelRenders;
     }
 }
