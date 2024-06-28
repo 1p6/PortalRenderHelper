@@ -48,6 +48,8 @@ public class PortalRenderHelperModule : EverestModule {
         Hooks.Add(new Hook(typeof(Camera).GetProperty("Right").GetGetMethod(), CameraHooks.CameraGetRight));
         Hooks.Add(new Hook(typeof(Camera).GetProperty("Top").GetGetMethod(), CameraHooks.CameraGetTop));
         Hooks.Add(new Hook(typeof(Camera).GetProperty("Bottom").GetGetMethod(), CameraHooks.CameraGetBottom));
+
+        // AngleInterval.TestCases();
     }
 
     public override void Unload() {

@@ -1,40 +1,48 @@
 using System;
-using Monocle;
 
 namespace Celeste.Mod.PortalRenderHelper;
 
 /*
-This struct represents a connected set of angles measured in radians.
+This struct represents a connected set of angles measured in integer multiples of 2*pi / DEG_CIRCLE radians.
 See the Contains function for how membership works.
-Start and End are arbitrary reals, and an angle is considered inside the interval if there is some multiple of 2*pi that can be added to it that brings it inside the range (Start, End).
-As for how Length, emptiness, and fullness work, if Start >= End, then obviously no angle can be brought in the range (Start, End), so the interval is empty. If Start + 2*pi <= End, then the range spans a full 2*pi radians, so there will always be a way to put an angle inside it, making the interval full. As for other intervals, the length is then always End-Start.
+Start is the starting angle, and the interval extends from that angle until Start + Length.
+Negative lengths correspond to empty intervals, and a length >= DEG_CIRCLE corresponds to a full circle.
 This representation allows for intervals less than half a circle, and for intervals greater than half a circle, to both be represented by the struct.
 */
-public record struct AngleInterval(float Start, float End) {
+public readonly record struct AngleInterval(int Start, int Length) {
+    public readonly int Start = Rem(Start, DEG_CIRCLE);
+    public readonly int Length = Math.Clamp(Length, 0, DEG_CIRCLE);
+
+    /*
+    1 px / 320 px (aka viewport width) = 0.003 radians
+    2*pi / 0.003 = 2010.6 deg per circle
+    going with double that, just in case we need the precision
+    */
+    public const int DEG_CIRCLE = 1 << 12;
     public static readonly AngleInterval EMPTY = new(0, 0);
-    public static readonly AngleInterval FULL = new(0, 7);
-    public readonly float Length => MathF.Min(MathF.PI*2f, Math.Max(0f, End - Start));
-    public readonly bool IsEmpty => End-Start <= 0.001f;
-    public readonly bool IsFull => End-Start >= MathF.PI*2f-0.01;
+    public static readonly AngleInterval FULL = new(0, DEG_CIRCLE);
+    public readonly bool IsEmpty => Length <= 0;
+    public readonly bool IsFull => Length >= DEG_CIRCLE;
+    public readonly int End => Start + Length;
 
     // Note: Both intersection and union can result in sets consisting of two disconnected intervals. In these cases, these functions will return the smallest interval that contains both of the parts of the actual result.
     public readonly AngleInterval Intersect(AngleInterval other) {
         if(IsEmpty || other.IsEmpty) return EMPTY;
         if(IsFull) return other;
         if(other.IsFull) return this;
-        AngleInterval usToThem = new(Start, Calc.WrapAngle(other.End-Start-MathF.PI)+MathF.PI+Start);
-        AngleInterval themToUs = new(other.Start, Calc.WrapAngle(End-other.Start-MathF.PI)+MathF.PI+other.Start);
+        AngleInterval usToThem = new(Start, Rem(other.End-Start-1, DEG_CIRCLE)+1);
+        AngleInterval themToUs = new(other.Start, Rem(End-other.Start-1, DEG_CIRCLE)+1);
         return (
-            Contains(other.Start, 0.001f),
-            Contains(other.End, 0.001f),
-            other.Contains(Start, 0.001f)
+            Contains(other.Start),
+            Contains(other.End-1),
+            other.Contains(Start)
         ) switch {
             (false, false, false) => EMPTY,
             (false, false, true) => this,
             (true, true, false) => other,
             (true, false, _) => themToUs,
             (false, true, _) => usToThem,
-            (true, true, true) => usToThem.Length + themToUs.Length < 0.001 ? EMPTY : (Length < other.Length ? this : other),
+            (true, true, true) => Length < other.Length ? this : other,
 
             // See comment in Union for why the following seemingly impossible cases get resolved by flipping the third boolean of the tuple.
 
@@ -46,12 +54,12 @@ public record struct AngleInterval(float Start, float End) {
         if(IsFull || other.IsFull) return FULL;
         if(IsEmpty) return other;
         if(other.IsEmpty) return this;
-        AngleInterval usToThem = new(Start, Calc.WrapAngle(other.End-Start-MathF.PI)+MathF.PI+Start);
-        AngleInterval themToUs = new(other.Start, Calc.WrapAngle(End-other.Start-MathF.PI)+MathF.PI+other.Start);
+        AngleInterval usToThem = new(Start, Rem(other.End-Start-1, DEG_CIRCLE)+1);
+        AngleInterval themToUs = new(other.Start, Rem(End-other.Start-1, DEG_CIRCLE)+1);
         return (
-            Contains(other.Start, -0.001f),
-            Contains(other.End, -0.001f),
-            other.Contains(Start, -0.001f)
+            Contains(other.Start),
+            Contains(other.End-1),
+            other.Contains(Start)
         ) switch {
             (false, false, false) => usToThem.Length < themToUs.Length ? usToThem : themToUs,
             (false, false, true) => other,
@@ -69,14 +77,28 @@ public record struct AngleInterval(float Start, float End) {
             // (true, false, true) => throw new Exception($"impossible angle interval case TFT! {this.Start} {this.End} ; {other.Start} {other.End}"),
         };
     }
-    public readonly AngleInterval Complement { get {
-        if(IsFull) return EMPTY;
-        if(IsEmpty) return FULL;
-        return new(End, Start + MathF.PI*2f);
-    }}
+    public readonly AngleInterval Complement => new(Start + Length, DEG_CIRCLE - Length);
 
-    // Positive tolerance shrinks the interval, negative grows it
-    public readonly bool Contains(float angle, float tolerance) {
-        return Calc.WrapAngle(angle - Start - MathF.PI - tolerance) + MathF.PI < End - Start - tolerance*2f;
+    public readonly bool Contains(int angle) {
+        return Rem(angle - Start, DEG_CIRCLE) < Length;
+    }
+    public override string ToString() {
+        return $"AngleInterval({Start}, {Length})";
+    }
+
+    public static int Rem(int a, int b) {
+        int res = a % b;
+        // could replace this with a & (b-1) if b is a power of two
+        return res < 0 ? res + b : res;
+    }
+
+    public static int RadToDeg(float radians) {
+        return (int)Math.Round(radians / (2*MathF.PI) * DEG_CIRCLE);
+    }
+
+    public static void TestCases() {
+        AngleInterval a = new(-50, 300);
+        AngleInterval b = new(190, 300);
+        Logger.Log(nameof(PortalRenderHelperModule), $"case 1 {a.Intersect(b)}");
     }
 }

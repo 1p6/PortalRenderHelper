@@ -84,7 +84,7 @@ public static class PortalRenderer {
             Vector2 newMin = Vector2.Max(minBound, poly.Min);
             Vector2 newMax = Vector2.Min(maxBound, poly.Max);
             AngleInterval newAngle = angleBound.Intersect(poly.AngleSpan);
-            if(newMin.X >= newMax.X - 0.001 || newMin.Y >= newMax.Y - 0.001 || newAngle.IsEmpty)
+            if(newMin.X >= newMax.X || newMin.Y >= newMax.Y || newAngle.IsEmpty)
                 continue;
             poly.SetStencil(OuterRenderTarget);
 
@@ -253,30 +253,30 @@ public class PortalRenderPoly : Entity {
         Min = new(float.PositiveInfinity);
         Max = new(float.NegativeInfinity);
         foreach(VertexPositionColor point in RenderPoly) {
-            Vector2 pos = Vector2.Transform(point.Position.XY(), SceneAs<Level>().Camera.Matrix);
+            Vector2 pos = Vector2.Transform(point.Position.XY(), SceneAs<Level>().Camera.Matrix).Round();
             Min = Vector2.Min(Min, pos);
             Max = Vector2.Max(Max, pos);
         }
         if(Closed) {
             AngleSpan = AngleInterval.EMPTY;
             Vector2 playerPos = PortalRenderer.PlayerPos.XY();
-            float prev = Calc.Angle(playerPos, RenderPoly[^1].Position.XY());
+            int prev = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[^1].Position.XY()) + CameraHooks.CameraAngle);
             foreach(VertexPositionColor point in RenderPoly) {
-                float current = Calc.Angle(playerPos, point.Position.XY());
-                float diff = Calc.WrapAngle(current-prev);
-                AngleSpan = AngleSpan.Union(diff < 0f ? new(prev+diff, prev) : new(prev, prev+diff));
+                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, point.Position.XY()) + CameraHooks.CameraAngle);
+                int diff = AngleInterval.Rem(current-prev + AngleInterval.DEG_CIRCLE/2, AngleInterval.DEG_CIRCLE) - AngleInterval.DEG_CIRCLE/2;
+                AngleSpan = AngleSpan.Union(diff < 0 ? new(prev+diff, -diff) : new(prev, diff));
                 prev = current;
             }
         } else {
             Vector2 playerPos = PortalRenderer.PlayerPos.XY();
-            float start = Calc.Angle(playerPos, RenderPoly[0].Position.XY());
-            float end = start, prev = start;
+            int end = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[0].Position.XY()) + CameraHooks.CameraAngle);
+            int start = end, prev = end;
             for(int i = 1; i < RenderPoly.Length/2; i++) {
-                float current = Calc.Angle(playerPos, RenderPoly[i].Position.XY());
-                end += Calc.WrapAngle(current - prev);
+                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[i].Position.XY()) + CameraHooks.CameraAngle);
+                start += AngleInterval.Rem(current-prev + AngleInterval.DEG_CIRCLE/2, AngleInterval.DEG_CIRCLE) - AngleInterval.DEG_CIRCLE/2;
                 prev = current;
             }
-            AngleSpan = new(end, start);
+            AngleSpan = new(start, end-start);
         }
     }
 
