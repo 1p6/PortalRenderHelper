@@ -7,4 +7,12 @@ public class PortalRenderHelperModuleSettings : EverestModuleSettings {
     public int MaxRecursionDepth {get; set;} = 50;
 
     public bool IgnoreMapRecursionLimits {get; set;} = false;
+
+    public InputMenu InputSettings {get; set;} = new();
+    [SettingSubMenu]
+    public class InputMenu {
+        public bool RotateDash {get; set;} = true;
+        public bool RotateWalk {get; set;} = true;
+        public bool RotateFeather {get; set;} = true;
+    }
 }

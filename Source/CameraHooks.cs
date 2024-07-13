@@ -89,4 +89,24 @@ public static class CameraHooks {
         Vector2 center = new(160, 90);
         return center + (self.Handler.Entity.Position - camPos - center).Rotate(CameraAngle) + self.Handler.DrawAt;
     }
+
+    public static void HookInput(On.Monocle.MInput.orig_UpdateVirtualInputs orig) {
+        orig();
+        var settings = PortalRenderHelperModule.Settings;
+
+        // feather movement always uses same controls as walking
+        Vector2 rotatedFeather = Input.Feather.Value.Rotate(-CameraAngle);
+
+        if(settings.InputSettings.RotateWalk) {
+            // attempt to match vanilla's varying thresholds for different direction movements
+            Vector2 sign = rotatedFeather.Sign();
+            Vector2 abs = rotatedFeather.Abs();
+            Input.MoveX.Value = abs.X >= 0.3 ? (int)sign.X : 0;
+            Input.GliderMoveY.Value = abs.Y >= 0.3 ? (int)sign.Y : 0;
+            Input.MoveY.Value = abs.Y >= 0.7 ? (int)sign.Y : 0;
+        }
+
+        if(settings.InputSettings.RotateDash) Input.Aim.Value = Input.Aim.Value.Rotate(-CameraAngle);
+        if(settings.InputSettings.RotateFeather) Input.Feather.Value = rotatedFeather;
+    }
 }
