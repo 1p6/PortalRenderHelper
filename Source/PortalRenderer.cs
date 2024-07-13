@@ -23,6 +23,7 @@ public static class PortalRenderer {
     }}
 
     public static Vector3 PlayerPos {get; set;} = Vector3.Zero;
+    public static float LookoutLerp {get; set;} = 0;
     public static readonly DepthStencilState StenciledCopy = new() {
         StencilEnable = true,
         DepthBufferEnable = false,
@@ -170,15 +171,19 @@ public static class PortalRenderer {
             List<PortalRenderPoly> list = level.Tracker.GetEntities<PortalRenderPoly>().Cast<PortalRenderPoly>().ToList();
             list.Sort((x, y) => Comparer.Default.Compare(x.PortalDepth, y.PortalDepth));
 
+            float targetLookoutLerp = 0;
             foreach(Lookout l in level.Tracker.GetEntities<Lookout>()) {
                 if(l.interacting) {
-                    PlayerPos = new(level.Camera.Position + new Vector2(160, 90), 0);
-                    goto skipPlayer;
+                    targetLookoutLerp = 1;
+                    break;
                 }
             }
+            LookoutLerp = LookoutLerp + (targetLookoutLerp - LookoutLerp) * 3*Engine.DeltaTime;
+            PlayerPos = new(level.Camera.Position + new Vector2(160, 90), 0);
             Player p = level.Tracker.GetEntity<Player>();
-            if(p != null) PlayerPos = new(p.Center, 0);
-            skipPlayer:
+            if(p != null) {
+                PlayerPos = new(Vector2.Lerp(p.Center, PlayerPos.XY(), LookoutLerp), 0);
+            }
             // PlayerSpriteMode oldMode = PlayerSpriteMode.Madeline;
             // if(p != null) {
             //     oldMode = p.Sprite.Mode;
@@ -355,7 +360,7 @@ public class PortalRenderEffect : Backdrop {
     public override void Update(Scene scene)
     {
         base.Update(scene);
-        CameraHooks.CameraAngle = Calc.AngleLerp(CameraHooks.CameraAngle, CameraHooks.CameraTargetAngle, 0.05f);
+        CameraHooks.CameraAngle = Calc.AngleLerp(CameraHooks.CameraAngle, CameraHooks.CameraTargetAngle, 3*Engine.DeltaTime);
     }
 
     public override void Render(Scene scene)
