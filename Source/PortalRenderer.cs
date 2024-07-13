@@ -43,6 +43,12 @@ public static class PortalRenderer {
     public static Vector2 XY(this Vector3 self) {
         return new(self.X, self.Y);
     }
+    public static readonly float MaxDiag = MathF.Sqrt(320*320+180*180);
+    public static float PointSegDist(Vector2 p, Vector2 a, Vector2 b) {
+        float t = Vector2.Dot(p-a, b-a) / (b-a).LengthSquared();
+        t = Calc.Clamp(t, 0, 1);
+        return Vector2.Distance(p, a + (b-a)*t);
+    }
 
     public static int LevelRenders = 0;
     public static int MaxLevelRenders = 0;
@@ -68,7 +74,7 @@ public static class PortalRenderer {
 
     // internal static int DebugCounter = 0;
 
-    public static void RenderPortalsToTarget(Level level, List<PortalRenderPoly> sortedPolys, int depth, Vector2 minBound, Vector2 maxBound, AngleInterval angleBound) {
+    public static void RenderPortalsToTarget(Level level, List<PortalRenderPoly> sortedPolys, int depth, Vector2 minBound, Vector2 maxBound, AngleInterval angleBound, float minRadius, float maxRadius) {
         if(InnerRenderTarget == null) throw new Exception("null inner render target!");
         Engine.Instance.GraphicsDevice.SetRenderTarget(InnerRenderTarget);
         Engine.Instance.GraphicsDevice.Clear(Color.Transparent);
@@ -77,6 +83,7 @@ public static class PortalRenderer {
         VirtualRenderTarget temp = OuterRenderTarget;
         OuterRenderTarget = InnerRenderTarget;
         VirtualRenderTarget inner = null;
+        List<PortalRenderPoly> radiusSortedPolys = new(sortedPolys.Count);
         foreach(PortalRenderPoly poly in sortedPolys) {
             if(poly.Flag.Length != 0 && poly.InvertFlag == level.Session.GetFlag(poly.Flag)) continue;
 
@@ -84,8 +91,21 @@ public static class PortalRenderer {
             Vector2 newMin = Vector2.Max(minBound, poly.Min);
             Vector2 newMax = Vector2.Min(maxBound, poly.Max);
             AngleInterval newAngle = angleBound.Intersect(poly.AngleSpan);
-            if(newMin.X >= newMax.X || newMin.Y >= newMax.Y || newAngle.IsEmpty)
+            float newMinRadius = MathF.Max(minRadius, poly.MinRadius);
+            float checkMaxRadius = MathF.Min(maxRadius, poly.MaxRadius);
+            if(newMin.X >= newMax.X || newMin.Y >= newMax.Y || newMinRadius >= checkMaxRadius || newAngle.IsEmpty)
                 continue;
+            radiusSortedPolys.Add(poly);
+        }
+        radiusSortedPolys.Sort((x, y) => -Comparer.Default.Compare(x.AvgRadius, y.AvgRadius));
+        foreach(PortalRenderPoly poly in radiusSortedPolys) {
+            // this UpdateBounds call is needed because recursive calls to RenderPortalsToTarget will update the bounds of this same poly using different camera / player positions.
+            poly.UpdateBounds();
+            Vector2 newMin = Vector2.Max(minBound, poly.Min);
+            Vector2 newMax = Vector2.Min(maxBound, poly.Max);
+            AngleInterval newAngle = angleBound.Intersect(poly.AngleSpan);
+            float newMinRadius = MathF.Max(minRadius, poly.MinRadius+1);
+            float newMaxRadius = poly.Closed ? MathF.Min(maxRadius, poly.MaxRadius-1) : maxRadius;
             poly.SetStencil(OuterRenderTarget);
 
             Vector2 origPos = level.Camera.Position;
@@ -103,7 +123,7 @@ public static class PortalRenderer {
             int newDepth = PortalRenderHelperModule.Settings.IgnoreMapRecursionLimits ? depth-1 : Math.Min(depth-1, poly.RecursionDepth);
             if(newDepth > 0) {
                 InnerRenderTarget = (inner ??= RenderTargetPool.Alloc());
-                RenderPortalsToTarget(level, sortedPolys, newDepth, newMin, newMax, newAngle);
+                RenderPortalsToTarget(level, sortedPolys, newDepth, newMin, newMax, newAngle, newMinRadius, newMaxRadius);
             } else InnerRenderTarget = null;
             Engine.Instance.GraphicsDevice.SetRenderTarget(null);
             DoPartialLevelRender(level);
@@ -164,10 +184,12 @@ public static class PortalRenderer {
             //     oldMode = p.Sprite.Mode;
             //     p.ResetSprite(PlayerSpriteMode.Badeline);
             // }
+            Vector2 screenSpacePlayer = Vector2.Transform(PlayerPos.XY(), level.Camera.Matrix);
+            Vector2 furthestCorner = new(screenSpacePlayer.X < 160 ? 320 : 0, screenSpacePlayer.Y < 90 ? 180 : 0);
 
             int beforeNumActive = RenderTargetPool.NumActiveTargets;
             LevelRenders = 0;
-            RenderPortalsToTarget(level, list, maxDepth, new(0,0), new(320,180), AngleInterval.FULL);
+            RenderPortalsToTarget(level, list, maxDepth, new(0,0), new(320,180), AngleInterval.FULL, 0, Vector2.Distance(screenSpacePlayer, furthestCorner));
             if(beforeNumActive != RenderTargetPool.NumActiveTargets)
                 throw new Exception("mismatched alloc / free of render targets from pool!");
 
@@ -239,6 +261,9 @@ public class PortalRenderPoly : Entity {
     public Vector2 Min = new(0,0);
     public Vector2 Max = new(320,180);
     public AngleInterval AngleSpan = AngleInterval.FULL;
+    public float MinRadius = 0;
+    public float MaxRadius = float.PositiveInfinity;
+    public float AvgRadius = float.PositiveInfinity;
 
     public void UpdateBounds() {
         if(!Closed) {
@@ -250,6 +275,7 @@ public class PortalRenderPoly : Entity {
                 // RenderPoly[^(i+1)].Position.Z = -1;
             }
         }
+        // rectangular coordinate bounds
         Min = new(float.PositiveInfinity);
         Max = new(float.NegativeInfinity);
         foreach(VertexPositionColor point in RenderPoly) {
@@ -257,26 +283,46 @@ public class PortalRenderPoly : Entity {
             Min = Vector2.Min(Min, pos);
             Max = Vector2.Max(Max, pos);
         }
+        // polar coordinate bounds
+        Vector2 playerPos = PortalRenderer.PlayerPos.XY();
+        MinRadius = float.PositiveInfinity;
         if(Closed) {
             AngleSpan = AngleInterval.EMPTY;
-            Vector2 playerPos = PortalRenderer.PlayerPos.XY();
-            int prev = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[^1].Position.XY()) + CameraHooks.CameraAngle);
+            Vector2 prevPos = RenderPoly[^1].Position.XY();
+            int prev = AngleInterval.RadToDeg(Calc.Angle(playerPos, prevPos) + CameraHooks.CameraAngle);
+            MaxRadius = 0;
             foreach(VertexPositionColor point in RenderPoly) {
-                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, point.Position.XY()) + CameraHooks.CameraAngle);
+                Vector2 currPos = point.Position.XY();
+                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, currPos) + CameraHooks.CameraAngle);
                 int diff = AngleInterval.Rem(current-prev + AngleInterval.DEG_CIRCLE/2, AngleInterval.DEG_CIRCLE) - AngleInterval.DEG_CIRCLE/2;
                 AngleSpan = AngleSpan.Union(diff < 0 ? new(prev+diff, -diff) : new(prev, diff));
                 prev = current;
+
+                float currDist = Vector2.Distance(playerPos, currPos);
+                MinRadius = MathF.Min(MinRadius, PortalRenderer.PointSegDist(playerPos, prevPos, currPos));
+                MaxRadius = MathF.Max(MaxRadius, currDist);
+                prevPos = currPos;
             }
+            AvgRadius = float.PositiveInfinity;
         } else {
-            Vector2 playerPos = PortalRenderer.PlayerPos.XY();
-            int end = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[0].Position.XY()) + CameraHooks.CameraAngle);
+            Vector2 prevPos = RenderPoly[0].Position.XY();
+            int end = AngleInterval.RadToDeg(Calc.Angle(playerPos, prevPos) + CameraHooks.CameraAngle);
             int start = end, prev = end;
+            MaxRadius = AvgRadius = Vector2.Distance(playerPos, prevPos);
             for(int i = 1; i < RenderPoly.Length/2; i++) {
-                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, RenderPoly[i].Position.XY()) + CameraHooks.CameraAngle);
+                Vector2 currPos = RenderPoly[i].Position.XY();
+                int current = AngleInterval.RadToDeg(Calc.Angle(playerPos, currPos) + CameraHooks.CameraAngle);
                 start += AngleInterval.Rem(current-prev + AngleInterval.DEG_CIRCLE/2, AngleInterval.DEG_CIRCLE) - AngleInterval.DEG_CIRCLE/2;
                 prev = current;
+
+                float currDist = Vector2.Distance(playerPos, currPos);
+                MinRadius = MathF.Min(MinRadius, PortalRenderer.PointSegDist(playerPos, prevPos, currPos));
+                MaxRadius = MathF.Max(MaxRadius, currDist);
+                AvgRadius += currDist;
+                prevPos = currPos;
             }
             AngleSpan = new(start, end-start);
+            AvgRadius /= RenderPoly.Length/2;
         }
     }
 
