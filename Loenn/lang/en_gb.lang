@@ -17,6 +17,16 @@ entities.PortalRenderHelper/PortalRenderPoly.attributes.description.portalDepth=
 entities.PortalRenderHelper/PortalRenderPoly.attributes.description.angle=The angle in degrees going out relative to the angle going in, where positive is clockwise.
 
 
+entities.PortalRenderHelper/BoosterRedirect.placements.name.default=Booster Redirect
+entities.PortalRenderHelper/BoosterRedirect.placements.description.default=Entity that redirects red boosters when passed through. The direction is set by doing a regular dash through it.
+
+
+entities.PortalRenderHelper/BoosterSwitch.placements.name.default=Booster Switch (Default)
+entities.PortalRenderHelper/BoosterSwitch.placements.description.default=Dash switch that can only be pressed via a red booster.
+entities.PortalRenderHelper/BoosterSwitch.placements.name.mirror=Booster Switch (Mirror)
+entities.PortalRenderHelper/BoosterSwitch.placements.description.mirror=Dash switch that can only be pressed via a red booster.
+
+
 triggers.PortalRenderHelper/SetCameraAngleTrigger.placements.name.default=Set Camera Angle
 triggers.PortalRenderHelper/SetCameraAngleTrigger.placements.description.default=Sets the angle and/or the target angle of the camera, as changed by going through rotated portals.
 

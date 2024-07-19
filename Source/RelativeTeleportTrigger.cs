@@ -75,6 +75,10 @@ public class RelativeTeleportTrigger : Trigger {
             }
             // Logger.Log(nameof(PortalRenderHelperModule), $"player speed before: {player.Speed}");
             player.Speed = player.Speed.Rotate(Angle);
+            player.lastAim = player.lastAim.Rotate(Angle);
+            if((MathF.Abs(Angle) + MathF.PI/2) % (2*MathF.PI) > MathF.PI)
+                player.Facing = (Facings)(-(int)player.Facing);
+            player.DashDir = player.DashDir.Rotate(Angle);
             // Logger.Log(nameof(PortalRenderHelperModule), $"player speed after: {player.Speed}");
             // Logger.Log(nameof(PortalRenderHelperModule), $"pos before: {player.level.Camera.Position}");
             // there was an issue with how the camera was appearing, seems it's more an issue in the base game itself having to do with the player entering and immediately entering a camera target trigger

@@ -9,7 +9,7 @@ Start is the starting angle, and the interval extends from that angle until Star
 Negative lengths correspond to empty intervals, and a length >= DEG_CIRCLE corresponds to a full circle.
 This representation allows for intervals less than half a circle, and for intervals greater than half a circle, to both be represented by the struct.
 */
-public readonly record struct AngleInterval(int Start, int Length) {
+public record struct AngleInterval(int Start, int Length) {
     public readonly int Start = Rem(Start, DEG_CIRCLE);
     public readonly int Length = Math.Clamp(Length, 0, DEG_CIRCLE);
 

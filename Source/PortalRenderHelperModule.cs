@@ -44,6 +44,8 @@ public class PortalRenderHelperModule : EverestModule {
         IL.Celeste.TalkComponent.TalkComponentUI.Render += CameraHooks.HookTalkComponent;
         On.Monocle.MInput.UpdateVirtualInputs += CameraHooks.HookInput;
         IL.Monocle.Commands.Render += HookDebugConsoleRender;
+        On.Celeste.DashSwitch.OnDashed += BoosterSwitch.HookOnDashed;
+        IL.Celeste.DashSwitch.Update += BoosterSwitch.HookUpdate;
 
         Hooks.Add(new Hook(typeof(Camera).GetProperty("Left").GetGetMethod(), CameraHooks.CameraGetLeft));
         Hooks.Add(new Hook(typeof(Camera).GetProperty("Right").GetGetMethod(), CameraHooks.CameraGetRight));
@@ -64,6 +66,8 @@ public class PortalRenderHelperModule : EverestModule {
         IL.Celeste.TalkComponent.TalkComponentUI.Render -= CameraHooks.HookTalkComponent;
         On.Monocle.MInput.UpdateVirtualInputs -= CameraHooks.HookInput;
         IL.Monocle.Commands.Render -= HookDebugConsoleRender;
+        On.Celeste.DashSwitch.OnDashed -= BoosterSwitch.HookOnDashed;
+        IL.Celeste.DashSwitch.Update -= BoosterSwitch.HookUpdate;
 
         Hooks.ForEach(x => x.Dispose());
     }

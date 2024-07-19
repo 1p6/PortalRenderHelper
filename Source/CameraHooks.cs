@@ -95,7 +95,7 @@ public static class CameraHooks {
         var settings = PortalRenderHelperModule.Settings;
 
         // feather movement always uses same controls as walking
-        Vector2 rotatedFeather = Input.Feather.Value.Rotate(-CameraAngle);
+        Vector2 rotatedFeather = Input.Feather.Value.Rotate(-CameraTargetAngle);
 
         if(settings.InputSettings.RotateWalk) {
             // attempt to match vanilla's varying thresholds for different direction movements
@@ -106,7 +106,7 @@ public static class CameraHooks {
             Input.MoveY.Value = abs.Y >= 0.7 ? (int)sign.Y : 0;
         }
 
-        if(settings.InputSettings.RotateDash) Input.Aim.Value = Input.Aim.Value.Rotate(-CameraAngle);
+        if(settings.InputSettings.RotateDash) Input.Aim.Value = Input.Aim.Value.Rotate(-CameraTargetAngle);
         if(settings.InputSettings.RotateFeather) Input.Feather.Value = rotatedFeather;
     }
 }
